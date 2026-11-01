@@ -41,36 +41,36 @@ def load_and_explore_gis_data(file_path):
         ...
     """
     
-    # TODO: Print a header to show what function is running
-    # TODO: Use print("=" * 50) and print("LOADING AND EXPLORING GIS DATA")
+    #  Print a header to show what function is running
+    # print("=" * 50) and print("LOADING AND EXPLORING GIS DATA")
     
-    # TODO: Print the file path being loaded
-    # TODO: Use print(f"Loading data from: {file_path}")
+    # Print the file path being loaded
+    # print(f"Loading data from: {file_path}")
     
-    # TODO: Try to load the CSV file using pd.read_csv()
-    # TODO: Wrap in try/except to handle missing files gracefully
-    # TODO: If file doesn't exist, print error and return None
+    # Try to load the CSV file using pd.read_csv()
+    # Wrap in try/except to handle missing files gracefully
+    # If file doesn't exist, print error and return None
     
-    # TODO: Print the shape of the DataFrame (rows, columns)
-    # TODO: Use df.shape to get a tuple like (150, 6)
-    # TODO: Print it in a friendly way: "Dataset shape: (150, 6) - That's 150 rows and 6 columns!"
+    # Print the shape of the DataFrame (rows, columns)
+    #  df.shape to get a tuple like (150, 6)
+    # Print it in a friendly way: "Dataset shape: (150, 6) - That's 150 rows and 6 columns!"
     
-    # TODO: Print the column names
-    # TODO: Use df.columns to get the list
-    # TODO: Print: "Columns: ['station_id', 'name', 'latitude', ...]"
+    # Print the column names
+    #  df.columns to get the list
+    # Print: "Columns: ['station_id', 'name', 'latitude', ...]"
     
-    # TODO: Print the first few rows using df.head()
-    # TODO: Show this to help understand the data
+    # Print the first few rows using df.head()
+    # Show this to help understand the data
     
-    # TODO: Print basic statistics using df.describe()
-    # TODO: This shows min, max, mean for numeric columns
+    # Print basic statistics using df.describe()
+    # This shows min, max, mean for numeric columns
     
-    # TODO: Check for missing values using df.isnull().sum()
-    # TODO: Print how many missing values in each column
+    # Check for missing values using df.isnull().sum()
+    # Print how many missing values in each column
     
-    # TODO: Print a completion message
+    # Print a completion message
     
-    # TODO: Return the loaded DataFrame
+    # Return the loaded DataFrame
     
     pass  # Remove this line when you implement the function
 
@@ -104,25 +104,25 @@ def filter_environmental_data(df, min_temp=15, max_temp=30, quality="good"):
           - Data quality: good
     """
     
-    # TODO: Print a header
-    # TODO: Use print("=" * 50) and print("FILTERING ENVIRONMENTAL DATA")
+    # Print a header
+    # print("=" * 50) and print("FILTERING ENVIRONMENTAL DATA")
     
-    # TODO: Print the original DataFrame shape
-    # TODO: Use len(df) to get the number of rows
+    # Print the original DataFrame shape
+    #   len(df) to get the number of rows
     
-    # TODO: Filter by temperature range using boolean indexing
-    # TODO: Create a mask: (df['temperature_c'] >= min_temp) & (df['temperature_c'] <= max_temp)
-    # TODO: Apply the mask: filtered_df = df[mask]
+    # TFilter by temperature range using boolean indexing
+    # Create a mask: (df['temperature_c'] >= min_temp) & (df['temperature_c'] <= max_temp)
+    # Apply the mask: filtered_df = df[mask]
     
-    # TODO: Filter by data quality
-    # TODO: Add another condition: filtered_df = filtered_df[filtered_df['data_quality'] == quality]
+    # Filter by data quality
+    # Add another condition: filtered_df = filtered_df[filtered_df['data_quality'] == quality]
     
-    # TODO: Calculate and print filtering statistics
-    # TODO: - How many rows remain after filtering
-    # TODO: - What percentage of data was retained
-    # TODO: - Show the filter criteria used
+    # Calculate and print filtering statistics
+    # Total number of rows remaining after filtering
+    # What percentage of data was retained
+    # Show the filter criteria used
     
-    # TODO: Return the filtered DataFrame
+    # Return the filtered DataFrame
     
     pass  # Remove this line when you implement the function
 
@@ -158,32 +158,32 @@ def calculate_station_statistics(df):
           - Average readings per station: 200.0
     """
     
-    # TODO: Print a header
-    # TODO: Use print("=" * 50) and print("CALCULATING STATION STATISTICS")
+    # Print a header
+    # print("=" * 50) and print("CALCULATING STATION STATISTICS")
     
-    # TODO: Count unique stations
-    # TODO: Use df['station_id'].nunique()
+    # Count unique stations
+    #  df['station_id'].nunique()
     
-    # TODO: Group by station_id
-    # TODO: Use df.groupby('station_id')
+    # Group by station_id
+    # Use df.groupby('station_id')
     
-    # TODO: Calculate statistics for each group
-    # TODO: - Count of readings: use .size() or .count()
-    # TODO: - Average temperature: use .mean()
-    # TODO: Create a new DataFrame with these statistics
+    # Calculate statistics for each group
+    # Count of readings: use .size() or .count()
+    # Average temperature: use .mean()
+    # Create a new DataFrame with these statistics
     
-    # TODO: Reset the index to make station_id a regular column
-    # TODO: Use .reset_index()
+    # Reset the index to make station_id a regular column
+    # Use .reset_index()
     
-    # TODO: Rename columns to be clear
-    # TODO: Use .rename(columns={'temperature_c': 'avg_temperature', ...})
+    # Rename columns to be clear
+    # Use .rename(columns={'temperature_c': 'avg_temperature', ...})
     
-    # TODO: Print summary statistics
-    # TODO: - Total readings analyzed
-    # TODO: - Number of stations
-    # TODO: - Average readings per station
+    # Print summary statistics
+    # Total readings analyzed
+    # Number of stations
+    # Average readings per station
     
-    # TODO: Return the statistics DataFrame
+    # Return the statistics DataFrame
     
     pass  # Remove this line when you implement the function
 
@@ -216,23 +216,23 @@ def join_station_data(stations_df, readings_df):
         Joined table: 1000 rows with station details added!
     """
     
-    # TODO: Print a header
-    # TODO: Use print("=" * 50) and print("JOINING STATION DATA")
+    # Print a header
+    # print("=" * 50) and print("JOINING STATION DATA")
     
-    # TODO: Print the shapes of both input DataFrames
-    # TODO: Show how many stations and how many readings
+    # Print the shapes of both input DataFrames
+    # Show how many stations and how many readings
     
-    # TODO: Join the DataFrames using pd.merge()
-    # TODO: Use the 'station_id' column as the key
-    # TODO: Use how='left' to keep all readings even if station info is missing
+    # Join the DataFrames using pd.merge()
+    # Use the 'station_id' column as the key
+    # Use how='left' to keep all readings even if station info is missing
     
-    # TODO: Print the shape of the joined DataFrame
-    # TODO: Verify all readings are still present
+    # Print the shape of the joined DataFrame
+    # Verify all readings are still present
     
-    # TODO: Print the new columns that were added
-    # TODO: Show which columns came from the stations table
+    # Print the new columns that were added
+    # Show which columns came from the stations table
     
-    # TODO: Return the joined DataFrame
+    # Return the joined DataFrame
     
     pass  # Remove this line when you implement the function
 
