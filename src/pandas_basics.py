@@ -240,9 +240,10 @@ def calculate_station_statistics(df):
         reading_count=('temperature_c', 'size'),
         avg_temperature=('temperature_c', 'mean')
     )
+    stats_df['avg_temperature'] = stats_df['avg_temperature'].round(1)
 
     if 'humidity_percent' in df.columns:
-        avg_humidity = df.groupby('station_id')['humidity_percent'].mean().reset_index(name='avg_humidity')
+        avg_humidity = df.groupby('station_id')['humidity_percent'].mean().round(1).reset_index(name='avg_humidity')
         stats_df = stats_df.merge(avg_humidity, on='station_id', how='left')
 
     print("=" * 50)
