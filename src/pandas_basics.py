@@ -233,8 +233,6 @@ def join_station_data(stations_df, readings_df):
     # Show which columns came from the stations table
     
     # Return the joined DataFrame
-    
-    pass  # Remove this line when you implement the function
 
 
 # =============================================================================
