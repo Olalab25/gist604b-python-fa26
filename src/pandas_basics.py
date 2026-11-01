@@ -71,8 +71,32 @@ def load_and_explore_gis_data(file_path):
     # Print a completion message
     
     # Return the loaded DataFrame
-    
-    pass  # Remove this line when you implement the function
+    if file_path is None:
+        return None
+
+    path = Path(file_path)
+    if not path.exists():
+        print(f"Error: File not found: {file_path}")
+        return None
+
+    try:
+        df = pd.read_csv(path)
+    except Exception as exc:
+        print(f"Error loading data from {file_path}: {exc}")
+        return None
+
+    print("=" * 50)
+    print("LOADING AND EXPLORING GIS DATA")
+    print(f"Loading data from: {file_path}")
+    print(f"Dataset shape: ({df.shape[0]}, {df.shape[1]}) - That's {df.shape[0]} rows and {df.shape[1]} columns!")
+    print(f"Columns: {list(df.columns)}")
+    print(df.head())
+    print(df.describe(include="all"))
+    print("Missing values by column:")
+    print(df.isnull().sum())
+    print("Data exploration complete!")
+
+    return df
 
 
 # =============================================================================
@@ -123,8 +147,29 @@ def filter_environmental_data(df, min_temp=15, max_temp=30, quality="good"):
     # Show the filter criteria used
     
     # Return the filtered DataFrame
-    
-    pass  # Remove this line when you implement the function
+    if df is None or not isinstance(df, pd.DataFrame):
+        return pd.DataFrame()
+
+    if df.empty:
+        return df.copy()
+
+    required_columns = {'temperature_c', 'data_quality'}
+    if not required_columns.issubset(df.columns):
+        return pd.DataFrame(columns=df.columns)
+
+    filtered_df = df.copy()
+    filtered_df = filtered_df[(filtered_df['temperature_c'] >= min_temp) & (filtered_df['temperature_c'] <= max_temp)].copy()
+    filtered_df = filtered_df[filtered_df['data_quality'].astype(str).str.lower() == str(quality).lower()].copy()
+
+    print("=" * 50)
+    print("FILTERING ENVIRONMENTAL DATA")
+    print(f"Original data: {len(df)} rows")
+    print(f"After filtering: {len(filtered_df)} rows ({(len(filtered_df) / len(df) * 100) if len(df) else 0:.1f}% of data retained)")
+    print("Filters applied:")
+    print(f"  - Temperature: {min_temp}°C to {max_temp}°C")
+    print(f"  - Data quality: {quality}")
+
+    return filtered_df
 
 
 # =============================================================================
@@ -184,8 +229,30 @@ def calculate_station_statistics(df):
     # Average readings per station
     
     # Return the statistics DataFrame
-    
-    pass  # Remove this line when you implement the function
+    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
+        return pd.DataFrame(columns=['station_id', 'reading_count', 'avg_temperature'])
+
+    required_columns = {'station_id', 'temperature_c'}
+    if not required_columns.issubset(df.columns):
+        return pd.DataFrame(columns=['station_id', 'reading_count', 'avg_temperature'])
+
+    stats_df = df.groupby('station_id', as_index=False).agg(
+        reading_count=('temperature_c', 'size'),
+        avg_temperature=('temperature_c', 'mean')
+    )
+
+    if 'humidity_percent' in df.columns:
+        avg_humidity = df.groupby('station_id')['humidity_percent'].mean().reset_index(name='avg_humidity')
+        stats_df = stats_df.merge(avg_humidity, on='station_id', how='left')
+
+    print("=" * 50)
+    print("CALCULATING STATION STATISTICS")
+    print(f"Calculating statistics for {df['station_id'].nunique()} unique stations...")
+    print(f"Total readings analyzed: {len(df)}")
+    print(f"Stations with data: {df['station_id'].nunique()}")
+    print(f"Average readings per station: {len(df) / df['station_id'].nunique() if df['station_id'].nunique() else 0:.1f}")
+
+    return stats_df[['station_id', 'reading_count', 'avg_temperature'] + (['avg_humidity'] if 'avg_humidity' in stats_df.columns else [])]
 
 
 # =============================================================================
@@ -233,6 +300,31 @@ def join_station_data(stations_df, readings_df):
     # Show which columns came from the stations table
     
     # Return the joined DataFrame
+    if stations_df is None or readings_df is None:
+        return pd.DataFrame()
+
+    if not isinstance(stations_df, pd.DataFrame) or not isinstance(readings_df, pd.DataFrame):
+        return pd.DataFrame()
+
+    if 'station_id' not in readings_df.columns:
+        return readings_df.copy()
+
+    stations = stations_df.copy()
+    if 'station_id' not in stations.columns:
+        return readings_df.copy()
+    if 'station_name' not in stations.columns and 'name' in stations.columns:
+        stations = stations.rename(columns={'name': 'station_name'})
+
+    joined_df = pd.merge(readings_df, stations, on='station_id', how='left')
+
+    print("=" * 50)
+    print("JOINING STATION DATA")
+    print(f"Stations table: {len(stations_df)} stations")
+    print(f"Readings table: {len(readings_df)} readings")
+    print(f"Joined table: {len(joined_df)} rows with station details added!")
+    print(f"Added columns: {[col for col in joined_df.columns if col not in readings_df.columns]}")
+
+    return joined_df
 
 
 # =============================================================================
