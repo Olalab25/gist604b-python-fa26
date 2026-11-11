@@ -21,6 +21,7 @@ import numpy as np
 from pathlib import Path
 import warnings
 from typing import Dict, List, Tuple, Union, Optional, Any
+from pyproj.exceptions import CRSError
 from shapely.geometry import Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
@@ -50,14 +51,24 @@ def load_spatial_data(file_path: Union[str, Path], **kwargs) -> gpd.GeoDataFrame
         >>> gdf = load_spatial_data('data/cities.geojson')
         >>> print(f"Loaded {len(gdf)} features")
     """
-    # TODO: Implement this function
-    # Hints:
-    # - Convert file_path to Path object
-    # - Check if file exists
-    # - Use gpd.read_file() to load data
-    # - Handle different file formats appropriately
-    # - Validate the loaded data is not empty
-    raise NotImplementedError("load_spatial_data not yet implemented")
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Spatial data file not found: {path}")
+    if not path.is_file():
+        raise ValueError(f"Expected a spatial data file, got: {path}")
+    if path.suffix.lower() in {".txt", ".csv"} and "driver" not in kwargs:
+        raise ValueError(f"Unsupported spatial data format: {path.suffix}")
+
+    try:
+        gdf = gpd.read_file(path, **kwargs)
+    except (ValueError, OSError) as exc:
+        raise ValueError(f"Could not read spatial data from {path}: {exc}") from exc
+
+    if not isinstance(gdf, gpd.GeoDataFrame):
+        raise ValueError(f"File did not contain vector spatial data: {path}")
+    if gdf.empty:
+        raise ValueError(f"Spatial data file contains no features: {path}")
+    return gdf
 
 
 # Function 2: Explore Properties
@@ -89,13 +100,16 @@ def explore_properties(gdf: gpd.GeoDataFrame) -> Dict[str, Any]:
         >>> print(f"Bounds: {props['bounds']}")
         >>> print(f"Geometry types: {props['geometry_types']}")
     """
-    # TODO: Implement this function
-    # Hints:
-    # - Access gdf.crs for coordinate system
-    # - Use gdf.total_bounds for extent
-    # - Check gdf.geometry.geom_type for geometry types
-    # - Count features with len(gdf)
-    raise NotImplementedError("explore_properties not yet implemented")
+    if not isinstance(gdf, gpd.GeoDataFrame):
+        raise ValueError("gdf must be a GeoDataFrame")
+
+    return {
+        "crs": gdf.crs,
+        "bounds": gdf.total_bounds.tolist(),
+        "geometry_types": gdf.geometry.geom_type.dropna().unique().tolist(),
+        "feature_count": len(gdf),
+        "columns": gdf.columns.tolist(),
+    }
 
 
 # Function 3: Transform CRS
@@ -125,14 +139,15 @@ def transform_crs(
         >>> gdf_mercator = transform_crs(gdf, 'EPSG:3857')
         >>> print(f"New CRS: {gdf_mercator.crs}")
     """
-    # TODO: Implement this function
-    # Hints:
-    # - Check if gdf has a CRS defined (gdf.crs)
-    # - Use gdf.to_crs(target_crs) for transformation
-    # - Handle cases where CRS is None
-    # - Validate target_crs is valid
-    # - Return a copy, not modify original
-    raise NotImplementedError("transform_crs not yet implemented")
+    if not isinstance(gdf, gpd.GeoDataFrame):
+        raise ValueError("gdf must be a GeoDataFrame")
+    if gdf.crs is None:
+        raise ValueError("GeoDataFrame has no CRS defined")
+
+    try:
+        return gdf.to_crs(target_crs)
+    except (CRSError, TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid target CRS {target_crs!r}: {exc}") from exc
 
 
 # Function 4: Geometry Operations
@@ -177,16 +192,50 @@ def geometry_operations(
         >>> result = geometry_operations(gdf, 'centroid')
         >>> centroids = result['result']
     """
-    # TODO: Implement this function
-    # Hints:
-    # - Support multiple operations with if/elif statements
-    # - For buffer: use gdf.geometry.buffer(distance)
-    # - For centroid: use gdf.geometry.centroid
-    # - For area: use gdf.geometry.area
-    # - For length: use gdf.geometry.length
-    # - For simplify: use gdf.geometry.simplify(tolerance)
-    # - Return results in standardized dictionary format
-    raise NotImplementedError("geometry_operations not yet implemented")
+    if not isinstance(gdf, gpd.GeoDataFrame):
+        raise ValueError("gdf must be a GeoDataFrame")
+
+    supported_operations = {"buffer", "centroid", "area", "length", "simplify"}
+    if operation not in supported_operations:
+        raise ValueError(f"Unsupported geometry operation: {operation}")
+
+    result = gdf.copy()
+    statistics: Dict[str, Any] = {"feature_count": len(gdf)}
+    if operation == "buffer":
+        if "distance" not in kwargs:
+            raise ValueError("buffer requires a distance parameter")
+        distance = kwargs["distance"]
+        if not isinstance(distance, (int, float, np.number)) or not np.isfinite(distance):
+            raise ValueError("buffer distance must be a finite number")
+        result = result.set_geometry(gdf.geometry.buffer(distance))
+    elif operation == "centroid":
+        result = result.set_geometry(gdf.geometry.centroid)
+    elif operation == "area":
+        values = gdf.geometry.area
+        result["area"] = values
+        statistics.update(total_area=values.sum(), mean_area=values.mean())
+    elif operation == "length":
+        values = gdf.geometry.length
+        result["length"] = values
+        statistics.update(total_length=values.sum(), mean_length=values.mean())
+    else:
+        if "tolerance" not in kwargs:
+            raise ValueError("simplify requires a tolerance parameter")
+        tolerance = kwargs["tolerance"]
+        if (not isinstance(tolerance, (int, float, np.number))
+                or not np.isfinite(tolerance) or tolerance < 0):
+            raise ValueError("simplify tolerance must be a finite, non-negative number")
+        result = result.set_geometry(
+            gdf.geometry.simplify(
+                tolerance,
+                preserve_topology=kwargs.get("preserve_topology", True),
+            )
+        )
+
+    if operation in {"buffer", "centroid", "simplify"}:
+        statistics.update(_calculate_geometry_statistics(result))
+
+    return {"result": result, "statistics": statistics, "operation": operation}
 
 
 # Function 5: Spatial Relationships
@@ -230,16 +279,59 @@ def spatial_relationships(
         >>> result = spatial_relationships(points, lines, 'distance')
         >>> distances = result['results']
     """
-    # TODO: Implement this function
-    # Hints:
-    # - Validate both GeoDataFrames have CRS defined
-    # - Check if CRS match (transform if needed)
-    # - For intersects: use gdf1.geometry.intersects(gdf2.geometry)
-    # - For contains: use gdf1.geometry.contains(gdf2.geometry)
-    # - For within: use gdf1.geometry.within(gdf2.geometry)
-    # - For distance: use gdf1.geometry.distance(gdf2.geometry)
-    # - For nearest: use spatial indexing (.sindex)
-    raise NotImplementedError("spatial_relationships not yet implemented")
+    if not isinstance(gdf1, gpd.GeoDataFrame) or not isinstance(gdf2, gpd.GeoDataFrame):
+        raise ValueError("Both inputs must be GeoDataFrames")
+    compatible, message = _validate_crs_compatibility(gdf1, gdf2)
+    if not compatible:
+        raise ValueError(message)
+
+    supported_relationships = {"intersects", "contains", "within", "distance", "nearest"}
+    if relationship not in supported_relationships:
+        raise ValueError(f"Unsupported spatial relationship: {relationship}")
+
+    if relationship in {"distance", "nearest"}:
+        if gdf2.empty:
+            distances = pd.Series(np.nan, index=gdf1.index, dtype=float)
+        else:
+            distances = gdf1.geometry.apply(
+                lambda geom: (
+                    np.nan if geom is None else gdf2.geometry.distance(geom).min()
+                )
+            )
+        results: Any = distances
+        if relationship == "nearest" and not gdf2.empty:
+            nearest_positions = [
+                int(gdf2.geometry.distance(geom).to_numpy().argmin())
+                for geom in gdf1.geometry
+            ]
+            results = pd.DataFrame(
+                {
+                    "nearest_index": [gdf2.index[position] for position in nearest_positions],
+                    "distance": distances.to_numpy(),
+                },
+                index=gdf1.index,
+            )
+        indices = gdf1.index.tolist()
+        return {
+            "relationship": relationship,
+            "results": results,
+            "count": len(gdf1),
+            "indices": indices,
+        }
+
+    predicate = getattr(gdf1.geometry, relationship)
+    matches = pd.Series(False, index=gdf1.index, dtype=bool)
+    if not gdf2.empty:
+        for geom in gdf2.geometry:
+            matches |= predicate(geom).fillna(False)
+
+    indices = matches.index[matches].tolist()
+    return {
+        "relationship": relationship,
+        "results": matches,
+        "count": int(matches.sum()),
+        "indices": indices,
+    }
 
 
 # Function 6: Spatial Joins
@@ -273,14 +365,23 @@ def spatial_joins(
         >>> result = spatial_joins(cities, countries, how='left', predicate='within')
         >>> print(f"Joined {len(result)} features")
     """
-    # TODO: Implement this function
-    # Hints:
-    # - Validate both inputs are GeoDataFrames
-    # - Check CRS compatibility
-    # - Use gpd.sjoin() for spatial join
-    # - Handle CRS mismatch by transforming
-    # - Validate result is not empty (for inner joins)
-    raise NotImplementedError("spatial_joins not yet implemented")
+    if not isinstance(left_gdf, gpd.GeoDataFrame) or not isinstance(right_gdf, gpd.GeoDataFrame):
+        raise ValueError("Both inputs must be GeoDataFrames")
+    compatible, message = _validate_crs_compatibility(left_gdf, right_gdf)
+    if not compatible:
+        raise ValueError(message)
+    if how not in {"inner", "left", "right"}:
+        raise ValueError(f"Unsupported join type: {how}")
+    if predicate not in {
+        "intersects", "contains", "within", "touches", "crosses",
+        "overlaps", "covers", "covered_by",
+    }:
+        raise ValueError(f"Unsupported spatial predicate: {predicate}")
+
+    try:
+        return gpd.sjoin(left_gdf, right_gdf, how=how, predicate=predicate)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"Spatial join failed: {exc}") from exc
 
 
 # Function 7: Overlay and Visualize
@@ -328,15 +429,39 @@ def overlay_and_visualize(
         >>> result = overlay_and_visualize(cities, save_path='cities_map.png')
         >>> plt.show()
     """
-    # TODO: Implement this function
-    # Hints:
-    # - If gdf2 provided, perform overlay with gpd.overlay()
-    # - Create visualization with gdf.plot()
-    # - Add basemap with contextily if available
-    # - For interactive map, use gdf.explore()
-    # - Calculate statistics (feature counts, total area)
-    # - Save figure if save_path provided
-    raise NotImplementedError("overlay_and_visualize not yet implemented")
+    if not isinstance(gdf1, gpd.GeoDataFrame):
+        raise ValueError("gdf1 must be a GeoDataFrame")
+    supported_overlays = {"intersection", "union", "difference", "symmetric_difference"}
+    if overlay_how not in supported_overlays:
+        raise ValueError(f"Unsupported overlay operation: {overlay_how}")
+
+    plot_gdf = gdf1
+    result: Dict[str, Any] = {}
+    if gdf2 is not None:
+        if not isinstance(gdf2, gpd.GeoDataFrame):
+            raise ValueError("gdf2 must be a GeoDataFrame")
+        compatible, message = _validate_crs_compatibility(gdf1, gdf2)
+        if not compatible:
+            raise ValueError(message)
+        overlay_result = gpd.overlay(gdf1, gdf2, how=overlay_how)
+        result["overlay_result"] = overlay_result
+        plot_gdf = overlay_result
+
+    result["statistics"] = _calculate_geometry_statistics(plot_gdf)
+    figure, axis = plt.subplots()
+    if not plot_gdf.empty:
+        plot_gdf.plot(ax=axis)
+    axis.set_title(
+        f"{overlay_how.replace('_', ' ').title()} overlay"
+        if gdf2 is not None
+        else "Spatial data"
+    )
+    result["figure"] = figure
+
+    if save_path is not None:
+        figure.savefig(save_path, bbox_inches="tight")
+
+    return result
 
 
 # Helper Functions (provided for you)
